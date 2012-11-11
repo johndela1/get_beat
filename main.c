@@ -69,7 +69,7 @@ ISR(ADC_vect)
 	inst_energy = calc_avg(inst_energy, EXP_I, samp);
 	if ((inst_energy/avg_energy) > 8 && decay <= 0) {
 		PORTB ^= (1 << PIN5); /* flip pin5 for visual*/
-		decay = 1500;
+		decay = 500;
 	}
 
 	if (decay > 0)
@@ -87,12 +87,9 @@ int main(void) {
 
 	int foo, bar;
 	while (1) {
-		if (decay < 1000 && decay > 0) printf("decay done\n");
-//		foo = (int)(avg_energy >> FSHIFT);
-//		bar = (int)(inst_energy >> FSHIFT);
-		//printf("%d %d\n", (inst_energy >> FSHIFT), (avg_energy >> FSHIFT));
-//		printf("%d %d\n", foo, bar);
-		_delay_ms(50);
+		//if (!decay) printf("decay done\n");
+		//printf("%d %d\n", (int)(inst_energy >> FSHIFT), (int)(avg_energy >> FSHIFT));
+		//_delay_ms(50);
 	}
 
 	return 0;
