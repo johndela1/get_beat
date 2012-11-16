@@ -60,20 +60,23 @@ ISR(ADC_vect)
 	for (i = 0; i < 0x8FFF; i++)
 		j++;
 */
-	uint8_t tmp = ADCH;
-	samp = tmp;
+	samp = ADCH;
 	samp = samp > 0 ? samp * FIXED_1 : 0;
 
 	//if (!(counter % 0x4000)) printf("samp: %ld\n",(samp >> FSHIFT));
 	avg_energy = calc_avg(avg_energy, EXP_A, samp);
 	inst_energy = calc_avg(inst_energy, EXP_I, samp);
-	if ((inst_energy/avg_energy) > 8 && decay <= 0) {
-		PORTB ^= (1 << PIN5); /* flip pin5 for visual*/
-		decay = 500;
+	if ((inst_energy/avg_energy) > 4 && decay <= 0) {
+		printf("beat\n");
+		PORTB |= (1 << PIN5); /* turn on led */
+		decay = 1500;
 	}
 
 	if (decay > 0)
 		decay --;
+	if (!decay)
+		PORTB &= ~(1 << PIN5); /* turn off led */
+		
 	//sei();    
 }
 
@@ -88,8 +91,8 @@ int main(void) {
 	int foo, bar;
 	while (1) {
 		//if (!decay) printf("decay done\n");
-		//printf("%d %d\n", (int)(inst_energy >> FSHIFT), (int)(avg_energy >> FSHIFT));
-		//_delay_ms(50);
+//		printf("%d %d\n", (int)(inst_energy >> FSHIFT), (int)(avg_energy >> FSHIFT));
+		_delay_ms(50);
 	}
 
 	return 0;
