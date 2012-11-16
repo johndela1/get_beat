@@ -21,6 +21,9 @@ uint32_t inst_energy = 0;
 uint32_t avg_energy = 0;
 uint32_t counter = 0;
 uint32_t decay = 0;
+uint32_t jiffies = 0;
+uint32_t prev_jiffies = 0;
+
 
 void adc_init(void) {
  /* Set ADC prescalar to 128 - 125KHz sample rate @ 16MHz */
@@ -38,7 +41,6 @@ void adc_init(void) {
 	ADCSRA |= (1 << ADEN);  // Enable ADC
 	ADCSRA |= (1 << ADSC);  // Start A2D Conversions 
 	ADCSRA |= (1 << ADIE);//enable interrupts
-	sei();    
 }
 
 uint32_t
@@ -54,6 +56,8 @@ ISR(ADC_vect)
 {
 	counter++;
 	uint32_t samp;
+	uint32_t diff;
+	
 /*
 	cli();	
 	int i, j = 0;
@@ -67,7 +71,9 @@ ISR(ADC_vect)
 	avg_energy = calc_avg(avg_energy, EXP_A, samp);
 	inst_energy = calc_avg(inst_energy, EXP_I, samp);
 	if ((inst_energy/avg_energy) > 4 && decay <= 0) {
-		printf("beat\n");
+		diff = jiffies - prev_jiffies;
+		prev_jiffies = jiffies;
+		printf("beat: %u\n", (int)diff);
 		PORTB |= (1 << PIN5); /* turn on led */
 		decay = 1500;
 	}
@@ -79,7 +85,10 @@ ISR(ADC_vect)
 		
 	//sei();    
 }
-
+ISR(TIMER0_OVF_vect)
+{
+	jiffies++;
+}
 int main(void) {    
 	adc_init();
 	uart_init();
@@ -88,11 +97,14 @@ int main(void) {
 
 	DDRB |= (1 << PIN5); /* (set up led for output) */
 
-	int foo, bar;
+	TCCR0A = 0;
+	TCCR0B |= ((1<<CS01) | (1<<CS00));
+	TIMSK0 |= (1<<TOIE0);
+
+	sei();    
 	while (1) {
-		//if (!decay) printf("decay done\n");
-//		printf("%d %d\n", (int)(inst_energy >> FSHIFT), (int)(avg_energy >> FSHIFT));
-		_delay_ms(50);
+//		printf("%u: %d %d\n", (int)jiffies, (int)(inst_energy >> FSHIFT), (int)(avg_energy >> FSHIFT));
+//		_delay_ms(30);
 	}
 
 	return 0;
