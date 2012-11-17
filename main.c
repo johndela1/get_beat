@@ -14,11 +14,13 @@
 
 #define FSHIFT 12
 #define FIXED_1   (1<<FSHIFT) /* 1.0 as fixed-point */
-#define EXP_I     10  
+#define EXP_I     10
 #define EXP_A     0xfff
 
 uint32_t inst_energy = 0;
 uint32_t avg_energy = 0;
+uint32_t avg_time = 0;
+uint32_t avg_dev = 0;
 uint32_t counter = 0;
 uint32_t decay = 0;
 uint32_t jiffies = 0;
@@ -73,7 +75,10 @@ ISR(ADC_vect)
 	if ((inst_energy/avg_energy) > 4 && decay <= 0) {
 		diff = jiffies - prev_jiffies;
 		prev_jiffies = jiffies;
-		printf("beat: %u\n", (int)diff);
+		avg_time = calc_avg(avg_time, 0x400, diff);
+		avg_dev = calc_avg(avg_dev, 0x800, abs(avg_time - diff));
+		printf("beat: %u %u %u\n", (int)diff, (int)avg_time,
+			(int)avg_dev);
 		PORTB |= (1 << PIN5); /* turn on led */
 		decay = 1500;
 	}
@@ -98,13 +103,15 @@ int main(void) {
 	DDRB |= (1 << PIN5); /* (set up led for output) */
 
 	TCCR0A = 0;
-	TCCR0B |= ((1<<CS01) | (1<<CS00));
+	//TCCR0B |= ((1<<CS01));// | (1<<CS00));
+	TCCR0B |= ((1<<CS00));// | (1<<CS00));
 	TIMSK0 |= (1<<TOIE0);
 
 	sei();    
 	while (1) {
-//		printf("%u: %d %d\n", (int)jiffies, (int)(inst_energy >> FSHIFT), (int)(avg_energy >> FSHIFT));
-//		_delay_ms(30);
+//		printf("%d %d\n", (int)(inst_energy >> FSHIFT), (int)(avg_energy >> FSHIFT));
+		printf("%u\n", jiffies);
+		_delay_ms(30);
 	}
 
 	return 0;
