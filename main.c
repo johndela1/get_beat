@@ -20,26 +20,22 @@
 uint32_t inst_energy = 0;
 uint32_t avg_energy = 0;
 uint32_t avg_time = 0;
-uint32_t avg_dev = 0;
+uint32_t avg_err = 0;
 uint32_t counter = 0;
 uint32_t decay = 0;
 uint32_t jiffies = 0;
 uint32_t prev_jiffies = 0;
 
 
-void adc_init(void) {
+void adc_init(void)
+{
  /* Set ADC prescalar to 128 - 125KHz sample rate @ 16MHz */
 	ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
-
 	ADMUX |= (1 << REFS0); /* Set ADC reference to AVCC */
-
 	/* Left adjust ADC result to allow easy 8 bit reading */
 	ADMUX |= (1 << ADLAR);
-
 	// No MUX values needed to be changed to use ADC0
-
 	ADCSRA |= (1 << ADATE);  // Set ADC to Free-Running Mode
-
 	ADCSRA |= (1 << ADEN);  // Enable ADC
 	ADCSRA |= (1 << ADSC);  // Start A2D Conversions 
 	ADCSRA |= (1 << ADIE);//enable interrupts
@@ -69,24 +65,23 @@ ISR(ADC_vect)
 	samp = ADCH;
 	samp = samp > 0 ? samp * FIXED_1 : 0;
 
-	//if (!(counter % 0x4000)) printf("samp: %ld\n",(samp >> FSHIFT));
 	avg_energy = calc_avg(avg_energy, EXP_A, samp);
 	inst_energy = calc_avg(inst_energy, EXP_I, samp);
 	if ((inst_energy/avg_energy) > 4 && decay <= 0) {
 		diff = jiffies - prev_jiffies;
 		prev_jiffies = jiffies;
 		avg_time = calc_avg(avg_time, 0x400, diff);
-		avg_dev = calc_avg(avg_dev, 0x800, abs(avg_time - diff));
+		avg_err = calc_avg(avg_err, 0x800, abs(avg_time - diff));
 		printf("beat: %u %u %u\n", (int)diff, (int)avg_time,
-			(int)avg_dev);
-		PORTB |= (1 << PIN5); /* turn on led */
+			(int)avg_err);
+		//PORTB |= (1 << PIN5); /* turn on led */
 		decay = 1500;
 	}
 
 	if (decay > 0)
 		decay --;
-	if (!decay)
-		PORTB &= ~(1 << PIN5); /* turn off led */
+	//if (!decay)
+	//	PORTB &= ~(1 << PIN5); /* turn off led */
 		
 	//sei();    
 }
@@ -106,12 +101,22 @@ int main(void) {
 	//TCCR0B |= ((1<<CS01));// | (1<<CS00));
 	TCCR0B |= ((1<<CS00));// | (1<<CS00));
 	TIMSK0 |= (1<<TOIE0);
-
+	uint32_t i;
 	sei();    
+	uint8_t state = 0;
 	while (1) {
-//		printf("%d %d\n", (int)(inst_energy >> FSHIFT), (int)(avg_energy >> FSHIFT));
-		printf("%u\n", jiffies);
-		_delay_ms(30);
+//	//	printf("%d %d\n", (int)(inst_energy >> FSHIFT), (int)(avg_energy >> FSHIFT));
+		//printf("%u\n", jiffies);
+		if(!(++state) % 2)
+			PORTB |= (1 << PIN5); /* turn on led */
+		else
+			PORTB &= ~(1 << PIN5); /* turn off led */
+		//_delay_ms(~avg_err);
+
+		//for (i = 0; i < 0xFFFE; i++)
+		//	3/2;
+			
+		
 	}
 
 	return 0;
