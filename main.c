@@ -71,7 +71,7 @@ ISR(ADC_vect)
 		diff = jiffies - prev_jiffies;
 		prev_jiffies = jiffies;
 		avg_time = calc_avg(avg_time, 0x400, diff);
-		avg_err = calc_avg(avg_err, 0x800, abs(avg_time - diff));
+		avg_err = calc_avg(avg_err, 0x400, abs(avg_time - diff));
 		printf("beat: %u %u %u\n", (int)diff, (int)avg_time,
 			(int)avg_err);
 		//PORTB |= (1 << PIN5); /* turn on led */
@@ -85,9 +85,23 @@ ISR(ADC_vect)
 		
 	//sei();    
 }
+uint8_t state = 0;
+uint8_t dark = 0;
 ISR(TIMER0_OVF_vect)
 {
 	jiffies++;
+	dark++;
+	uint8_t level = (uint8_t) avg_err;
+	if(avg_err<300) level = 99;
+	else level = 0;
+
+	
+	if (dark > level) dark = 0;
+	PORTB ^= 1 << PIN5;
+	if (!dark )
+		PORTB |= (1 << PIN5); /* turn on led */
+	else
+		PORTB &= ~(1 << PIN5); /* turn off led */
 }
 int main(void) {    
 	adc_init();
@@ -98,25 +112,15 @@ int main(void) {
 	DDRB |= (1 << PIN5); /* (set up led for output) */
 
 	TCCR0A = 0;
-	//TCCR0B |= ((1<<CS01));// | (1<<CS00));
-	TCCR0B |= ((1<<CS00));// | (1<<CS00));
+	//TCCR0B |= ((1<<CS02));
+	//TCCR0B |= ((1<<CS01));
+	TCCR0B |= ((1<<CS00));
 	TIMSK0 |= (1<<TOIE0);
-	uint32_t i;
 	sei();    
-	uint8_t state = 0;
 	while (1) {
 //	//	printf("%d %d\n", (int)(inst_energy >> FSHIFT), (int)(avg_energy >> FSHIFT));
-		//printf("%u\n", jiffies);
-		if(!(++state) % 2)
-			PORTB |= (1 << PIN5); /* turn on led */
-		else
-			PORTB &= ~(1 << PIN5); /* turn off led */
+//		printf("%u\n", jiffies);
 		//_delay_ms(~avg_err);
-
-		//for (i = 0; i < 0xFFFE; i++)
-		//	3/2;
-			
-		
 	}
 
 	return 0;
